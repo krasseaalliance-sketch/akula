@@ -25,8 +25,8 @@ function ScoutLanding() {
       <section className="lh-hero" id="top">
         <div className="lh-hero-copy">
           <p className="lh-eyebrow">LEADHUNTER / SCOUT <span>LIVE</span></p>
-          <h1>Клиент уже ищет вас.<br /><em>Scout найдёт его первым.</em></h1>
-          <p className="lh-hero-lead">Scout — интеллектуальная система поиска новых возможностей для бизнеса. Он помогает находить клиентов, заказы и точки роста — вовремя и по заданным критериям.</p>
+          <h1>Клиент уже ищет вас<br /><em>Scout найдёт его первым</em></h1>
+          <p className="lh-hero-lead">Scout — интеллектуальная система поиска новых возможностей для бизнеса<br />Он помогает находить клиентов, заказы и точки роста — вовремя и по заданным критериям</p>
           <div className="lh-hero-actions">
             <a className="lh-button lh-button-primary" href={appPath("/login")}>Открыть рабочий кабинет</a>
             <a className="lh-text-link" href="#how">Как это работает</a>
@@ -40,15 +40,15 @@ function ScoutLanding() {
           <div className="lh-hero-logo">S</div>
           <strong>LEADHUNTER<br /><b>ВИДИТ РЫНОК</b></strong>
           <strong>SCOUT<br /><b>НАХОДИТ КЛИЕНТА</b></strong>
-          <small>Реальные сигналы спроса, профиль и контакт в одном рабочем потоке.</small>
+          <small>Реальные сигналы спроса, профиль и контакт в одном рабочем потоке</small>
         </div>
       </section>
 
       <section className="lh-statement" id="how">
         <p className="lh-eyebrow">НЕ ПРОЦЕСС · РЕЗУЛЬТАТ</p>
-        <h2>Не создаём спрос рекламой.<br /><span>Находим уже существующий.</span></h2>
+        <h2>Не создаём спрос рекламой<br /><span>Находим уже существующий</span></h2>
         <div className="lh-statement-foot">
-          <p>После входа доступны только данные вашего аккаунта и действия, разрешённые рабочей областью.</p>
+          <p>После входа доступны только данные вашего аккаунта и действия, разрешённые рабочей областью</p>
           <a className="lh-button lh-button-dark" href={appPath("/login")}>Перейти к данным</a>
         </div>
       </section>
@@ -56,8 +56,8 @@ function ScoutLanding() {
       <section className="lh-pilot" id="pilot">
         <div>
           <p className="lh-eyebrow">SCOUT / РАБОЧИЙ КАБИНЕТ</p>
-          <h2>Проверяйте возможности<br /><em>в одном месте.</em></h2>
-          <p>Лента, профиль поиска и обратная связь связаны с серверным API. Если данных нет, кабинет покажет это явно.</p>
+          <h2>Проверяйте возможности<br /><em>в одном месте</em></h2>
+          <p>Лента, профиль поиска и обратная связь связаны с серверным API — если данных нет, кабинет покажет это явно</p>
         </div>
         <div className="lh-pilot-offer">
           <span>Авторизованный доступ к вашему рабочему пространству</span>
@@ -70,7 +70,7 @@ function ScoutLanding() {
           <span className="lh-brand-mark">LH</span>
           <span><strong>LEADHUNTER</strong><small>SCOUT / COMMERCIAL DEMAND</small></span>
         </a>
-        <p>Scout находит существующий спрос.</p>
+        <p>Scout находит существующий спрос</p>
         <a className="lh-footer-login" href={appPath("/login")}>Войти в кабинет</a>
       </footer>
     </main>
