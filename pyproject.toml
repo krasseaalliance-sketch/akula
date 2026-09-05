@@ -13,6 +13,7 @@ dependencies = [
   "alembic>=1.14,<2",
   "redis>=5,<6",
   "cryptography>=44,<47",
+  "beautifulsoup4>=4.14,<5",
   "telethon>=1.42,<2",
 ]
 
