@@ -25,7 +25,7 @@ export default function ConstructiveRegisterPage() {
       const payload = await response.json() as { access_token?: string; detail?: string };
       if (!response.ok || !payload.access_token) throw new Error(payload.detail || "REGISTER_FAILED");
       window.sessionStorage.setItem("lead-hunter-token", payload.access_token);
-      window.location.assign(appPath("/"));
+      window.location.assign(appPath("/cabinet"));
     } catch (error) {
       setMessage(error instanceof Error && error.message === "INVITE_ALREADY_USED" ? "Эта ссылка уже использована." : "Ссылка недействительна или срок её действия истёк.");
     } finally {

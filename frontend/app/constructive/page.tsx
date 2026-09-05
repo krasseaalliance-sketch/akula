@@ -1,5 +1,5 @@
-import { ConstructiveView } from "../constructive-view";
+import { ConstructiveLanding } from "../constructive-landing";
 
 export default function ConstructivePage() {
-  return <ConstructiveView />;
+  return <ConstructiveLanding />;
 }

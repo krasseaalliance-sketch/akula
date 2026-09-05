@@ -25,7 +25,7 @@ export default function ConstructiveLoginPage() {
       if (!response.ok) throw new Error("INVALID_CREDENTIALS");
       const payload = await response.json() as LoginPayload;
       window.sessionStorage.setItem("lead-hunter-token", payload.access_token);
-      window.location.assign(appPath("/"));
+      window.location.assign(appPath("/cabinet"));
     } catch {
       setMessage("Не удалось войти. Проверьте email и пароль или запросите доступ у Creator.");
     } finally {
