@@ -29,6 +29,8 @@
 @media(max-width:620px){.lh-site .lh-hero{padding-top:18px;padding-bottom:42px}}
 .lh-site .lh-hero{padding-bottom:14px}
 @media(max-width:620px){.lh-site .lh-hero{padding-bottom:20px}}
+.lh-site .lh-hero-aside{display:flex;align-items:center;justify-content:center;padding:0;border:0}
+.lh-site .lh-hero-brand-logo{display:block;width:min(430px,100%);height:auto;aspect-ratio:1;object-fit:contain;margin:0;border-radius:50%}
 .lh-site .lh-process{grid-template-columns:minmax(0,.68fr) minmax(0,1.32fr)}.lh-site .lh-process>.lh-section-intro{min-width:0}.lh-site .lh-process>.lh-section-intro h2{max-width:460px;font-size:clamp(28px,3vw,46px)!important;line-height:1.04!important;overflow-wrap:anywhere}.lh-site .lh-process-list{min-width:0}
 @media(max-width:900px){.lh-site .lh-process{grid-template-columns:1fr}.lh-site .lh-process>.lh-section-intro h2{max-width:700px;font-size:clamp(30px,5vw,52px)!important}}
 @media(max-width:620px){.lh-site .lh-process>.lh-section-intro h2{font-size:clamp(30px,9vw,40px)!important}}

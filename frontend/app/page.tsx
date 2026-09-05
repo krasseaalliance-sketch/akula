@@ -1,4 +1,5 @@
 import { ConstructiveLanding } from "./constructive-landing";
+import Image from "next/image";
 import { appPath } from "./paths";
 
 export default function Page() {
@@ -37,10 +38,7 @@ function ScoutLanding() {
           </div>
         </div>
         <div className="lh-hero-aside">
-          <div className="lh-hero-logo">S</div>
-          <strong>LEADHUNTER<br /><b>ВИДИТ РЫНОК</b></strong>
-          <strong>SCOUT<br /><b>НАХОДИТ КЛИЕНТА</b></strong>
-          <small>Реальные сигналы спроса, профиль и контакт в одном рабочем потоке</small>
+          <Image className="lh-hero-brand-logo" src={appPath("/brand/scout-retina-2508.png")} alt="Scout — интеллектуальный поиск возможностей" width={1254} height={1254} priority />
         </div>
       </section>
 
