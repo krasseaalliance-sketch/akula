@@ -1,0 +1,14 @@
+.git
+.venv
+__pycache__
+*.py[cod]
+*.db
+*.sqlite
+*.msi
+frontend/node_modules
+frontend/.next
+backend/*.egg-info
+backend/tests/__pycache__
+backend/app/__pycache__
+backend/migrations/**/__pycache__
+

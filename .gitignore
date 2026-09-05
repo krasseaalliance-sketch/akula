@@ -1,0 +1,20 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.msi
+frontend/node_modules/
+frontend/.next/
+backend/*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Hunter source credentials and Telegram session material: never commit or archive.
+*.session
+*.session-journal
+.telegram_sessions/
+.source_hub/
+secrets/
