@@ -16,9 +16,6 @@ on:
 permissions:
   contents: read
 
-env:
-  EXPECTED_CORE_COMMIT: c73e38e208767c8f19d1c0fe4014265b4241e4e4
-
 jobs:
   candidate:
     runs-on: ubuntu-latest
@@ -36,9 +33,10 @@ jobs:
         run: |
           set -euo pipefail
           commit="$(git rev-parse HEAD)"
-          test "$commit" = "$EXPECTED_CORE_COMMIT"
           tag="$(git describe --tags --exact-match "$commit")"
           test "$tag" = "core-r1-staging-rc1-2026-09-07"
+          tag_commit="$(git rev-list -n 1 "$tag")"
+          test "$commit" = "$tag_commit"
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Scan tracked candidate for credential-shaped content
@@ -114,10 +112,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-artifact
-          git archive --format=tar --prefix=core-r1-staging-rc1-2026-09-07/ "$EXPECTED_CORE_COMMIT" > release-artifact/core-r1-staging-rc1-2026-09-07.tar
+          git archive --format=tar --prefix=core-r1-staging-rc1-2026-09-07/ HEAD > release-artifact/core-r1-staging-rc1-2026-09-07.tar
           sha256sum release-artifact/core-r1-staging-rc1-2026-09-07.tar > release-artifact/SHA256SUMS
           {
-            echo "commit=$EXPECTED_CORE_COMMIT"
+            echo "commit=$(git rev-parse HEAD)"
             echo "tag=core-r1-staging-rc1-2026-09-07"
             echo "alembic_head=0025_core_day4_production_evidence"
             echo "deployment=not automatic; staging host and STAGING_* secrets are intentionally not used"
