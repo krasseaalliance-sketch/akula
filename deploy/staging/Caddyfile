@@ -1,0 +1,6 @@
+{$STAGING_HOST} {
+    encode gzip
+    header X-Environment "STAGING"
+    header X-Release-Tag "{$STAGING_RELEASE_TAG}"
+    reverse_proxy frontend:3000
+}

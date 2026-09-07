@@ -1,0 +1,121 @@
+name: Core Release 1 candidate checks
+
+on:
+  push:
+    tags:
+      - "core-r1-rc*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Immutable tag or commit to verify"
+        required: true
+        default: "core-r1-rc1-2026-09-07"
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_CORE_COMMIT: 71b1d7869f10a44b895c04f5576d8ea55cde5bca
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.identity.outputs.commit }}
+      tag: ${{ steps.identity.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+      - name: Verify immutable candidate identity
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          test "$commit" = "$EXPECTED_CORE_COMMIT"
+          tag="$(git describe --tags --exact-match "$commit")"
+          test "$tag" = "core-r1-rc1-2026-09-07"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Scan tracked candidate for credential-shaped content
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|-----BEGIN (RSA|OPENSSH|EC|PRIVATE) KEY-----|sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}'
+          if git grep -I -n -E "$pattern" HEAD --; then
+            echo "credential-shaped content found" >&2
+            exit 1
+          fi
+      - name: Report staging mode
+        run: echo "No staging deployment job is configured; this workflow is checks-and-artifact only."
+
+  backend:
+    needs: candidate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.candidate.outputs.commit }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip && python -m pip install -e .
+      - run: python -m pytest -q
+        working-directory: backend
+      - run: python -m compileall -q app migrations/versions
+        working-directory: backend
+      - run: python -m pytest tests/test_migrations_clean_upgrade.py -q
+        working-directory: backend
+
+  frontend:
+    needs: candidate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.candidate.outputs.commit }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run typecheck
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
+      - run: node --test tests/*.test.mjs
+        working-directory: frontend
+      - run: NEXT_DIST_DIR=.next-ci npm run build
+        working-directory: frontend
+
+  artifact:
+    needs: [candidate, backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.candidate.outputs.commit }}
+          fetch-depth: 0
+      - name: Build release artifact from exact commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifact
+          git archive --format=tar --prefix=core-r1-rc1-2026-09-07/ "$EXPECTED_CORE_COMMIT" > release-artifact/core-r1-rc1-2026-09-07.tar
+          sha256sum release-artifact/core-r1-rc1-2026-09-07.tar > release-artifact/SHA256SUMS
+          {
+            echo "commit=$EXPECTED_CORE_COMMIT"
+            echo "tag=core-r1-rc1-2026-09-07"
+            echo "alembic_head=0025_core_day4_production_evidence"
+            echo "deployment=not automatic; staging host and STAGING_* secrets are intentionally not used"
+          } > release-artifact/RELEASE_METADATA.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-r1-rc1-2026-09-07
+          path: release-artifact/
