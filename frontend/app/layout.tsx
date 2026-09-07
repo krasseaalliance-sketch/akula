@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./core/core.css";
 import "./landing.css";
 import "./login/login.css";
 import "./support-chat.css";

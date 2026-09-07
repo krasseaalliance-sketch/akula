@@ -26,30 +26,14 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".next-deploy-constructive/types/**/*.ts",
-    ".next-deploy-constructive10/types/**/*.ts",
-    ".next-deploy-constructive11/types/**/*.ts",
-    ".next-deploy-constructive12/types/**/*.ts",
-    ".next-deploy-constructive13/types/**/*.ts",
-    ".next-deploy-constructive14/types/**/*.ts",
-    ".next-deploy-constructive15/types/**/*.ts",
-    ".next-deploy-constructive16/types/**/*.ts",
-    ".next-deploy-constructive17/types/**/*.ts",
-    ".next-deploy-constructive18/types/**/*.ts",
-    ".next-deploy-constructive2/types/**/*.ts",
-    ".next-deploy-constructive3/types/**/*.ts",
-    ".next-deploy-constructive4/types/**/*.ts",
-    ".next-deploy-constructive5/types/**/*.ts",
-    ".next-deploy-constructive6/types/**/*.ts",
-    ".next-deploy-constructive7/types/**/*.ts",
-    ".next-deploy-constructive8/types/**/*.ts",
-    ".next-deploy-constructive9/types/**/*.ts",
-    ".next-deploy/types/**/*.ts",
     ".next/types/**/*.ts",
-    "next-env.d.ts",
-    ".next-production-constructive-20260905/types/**/*.ts"
+    "next-env.d.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next*/**",
+    ".tmp*/**",
+    "artifacts/**",
+    "scout-release-*/**"
   ]
 }

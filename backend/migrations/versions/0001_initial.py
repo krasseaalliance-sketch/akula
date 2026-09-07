@@ -9,10 +9,35 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+INITIAL_TABLES = [
+    "users",
+    "workspaces",
+    "workspace_members",
+    "companies",
+    "brands",
+    "offers",
+    "campaigns",
+    "audiences",
+    "communities",
+    "community_permissions",
+    "leads",
+    "message_drafts",
+    "publications",
+    "publication_jobs",
+    "conversations",
+    "conversation_messages",
+    "integration_accounts",
+    "audit_events",
+    "system_state",
+]
+
 
 def upgrade() -> None:
     bind = op.get_bind()
-    Base.metadata.create_all(bind=bind)
+    Base.metadata.create_all(
+        bind=bind,
+        tables=[Base.metadata.tables[name] for name in INITIAL_TABLES],
+    )
     inspector = inspect(bind)
     additions = {
         "leads": [("dedupe_key", String(128), True)],

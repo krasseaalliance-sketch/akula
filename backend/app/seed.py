@@ -22,7 +22,22 @@ from .models import (
     Workspace,
     WorkspaceMember,
 )
+from .core_models import CoreAgent, CoreProduct
 from .security import hash_password
+
+
+CORE_AGENT_SPECS = [
+    ("orchestrator", "Оркестратор", "Принимает цель и собирает маршрут работ.", ["planning", "routing"], ["prepare_route"], 2),
+    ("product-analyst", "Продуктовый аналитик", "Формулирует проблему, ценность и метрики.", ["requirements", "metrics"], ["execute_task"], 1),
+    ("architect", "Архитектор", "Проектирует границы модулей, контракты и риски.", ["architecture", "contracts"], ["execute_task"], 1),
+    ("ux-ui-designer", "UX/UI-дизайнер", "Проектирует проверяемые пользовательские сценарии.", ["ux", "ui"], ["execute_task"], 1),
+    ("data-engineer", "Инженер данных", "Строит модели, импорты, поиск и контроль качества данных.", ["data", "search"], ["execute_task"], 1),
+    ("developer", "Разработчик", "Реализует функции, интеграции и исправления.", ["code", "integrations"], ["execute_task"], 1),
+    ("qa-engineer", "QA-инженер", "Независимо проверяет сценарии и фактический результат.", ["qa", "regression"], ["execute_task"], 1),
+    ("project-manager", "Проектировщик БД / менеджер проекта", "Ведёт структуру работ, зависимости и решения.", ["planning", "dependencies"], ["execute_task", "prepare_route"], 1),
+    ("copywriter", "Копирайтер", "Создаёт тексты по задаче, аудитории и согласованному тону.", ["copy", "editing"], ["execute_task"], 1),
+    ("editor", "Монтажёр", "Собирает видео из утверждённых исходников.", ["video", "editing"], ["execute_task"], 1),
+]
 
 
 def _one(db, model, **filters):
@@ -64,6 +79,45 @@ def seed() -> None:
         else:
             member.role = "OWNER"
             member.status = "ACTIVE"
+
+        core_products = [
+            ("scout", "Scout", "Поиск и квалификация коммерческого спроса."),
+            ("constructive", "Constructive / ASmeT", "Операционный контроль проектов и объектов."),
+        ]
+        for product_key, name, description in core_products:
+            product = _one(db, CoreProduct, workspace_id=workspace.id, product_key=product_key)
+            if product is None:
+                db.add(CoreProduct(
+                    workspace_id=workspace.id,
+                    product_key=product_key,
+                    name=name,
+                    description=description,
+                    created_by=user.id,
+                ))
+        db.flush()
+
+        for agent_key, name, description, competencies, allowed_actions, concurrency_limit in CORE_AGENT_SPECS:
+            agent = _one(db, CoreAgent, workspace_id=workspace.id, agent_key=agent_key)
+            if agent is None:
+                db.add(CoreAgent(
+                    workspace_id=workspace.id,
+                    agent_key=agent_key,
+                    name=name,
+                    role=name,
+                    description=description,
+                    competencies=competencies,
+                    allowed_tools=[],
+                    allowed_actions=allowed_actions,
+                    limits={"max_parallel_tasks": concurrency_limit, "external_actions": "approval_required"},
+                    concurrency_limit=concurrency_limit,
+                    available=True,
+                ))
+            else:
+                agent.competencies = competencies
+                agent.allowed_actions = allowed_actions
+                agent.limits = {"max_parallel_tasks": concurrency_limit, "external_actions": "approval_required"}
+                agent.concurrency_limit = concurrency_limit
+                agent.available = True
 
         travel = _one(db, Company, workspace_id=workspace.id, public_name="KRASSEA Travel")
         if travel is None:

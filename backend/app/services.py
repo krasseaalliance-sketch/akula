@@ -22,6 +22,9 @@ PERMISSIONS = {
     "integration.manage",
     "analytics.view",
     "audit.view",
+    "core.view",
+    "core.manage",
+    "core.accept",
 }
 
 ROLE_PERMISSIONS: dict[str, set[str]] = {
@@ -37,10 +40,13 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "message.approve",
         "analytics.view",
         "audit.view",
+        "core.view",
+        "core.manage",
+        "core.accept",
     },
-    "OPERATOR": {"campaign.publish", "lead.view", "lead.edit", "message.approve", "analytics.view"},
-    "ANALYST": {"lead.view", "analytics.view", "audit.view"},
-    "VIEWER": {"lead.view", "analytics.view"},
+    "OPERATOR": {"campaign.publish", "lead.view", "lead.edit", "message.approve", "analytics.view", "core.view"},
+    "ANALYST": {"lead.view", "analytics.view", "audit.view", "core.view", "core.accept"},
+    "VIEWER": {"lead.view", "analytics.view", "core.view"},
 }
 
 

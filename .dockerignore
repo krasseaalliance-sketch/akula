@@ -7,8 +7,36 @@ __pycache__
 *.msi
 frontend/node_modules
 frontend/.next
+frontend/.next*/
+node_modules/
+tmp/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.telegram_sessions/
+.yacht-yandex-result/
 backend/*.egg-info
 backend/tests/__pycache__
 backend/app/__pycache__
 backend/migrations/**/__pycache__
 
+# The Dockerfiles copy only the application directories listed explicitly.
+# Keep archived bundles, screenshots, exports, and temporary work products out
+# of the root build context so local rebuilds remain deterministic and fast.
+.tmp*/
+archive-*/
+repack-*/
+artifacts/
+concept-previews/
+mobile-app/
+pytest-cache-files-*/
+_archive*/
+_brand*/
+*.zip
+*.tgz
+*.tar
+*.tar.gz
+*.b64
+*.iso
+*.bin
+*.gz

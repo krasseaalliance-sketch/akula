@@ -8,6 +8,7 @@ from .api import router
 from .campaign_intelligence_api import router as campaign_intelligence_router
 from .community_classification_api import router as community_classification_router
 from .config import get_settings
+from .core_api import router as core_router
 from .constructive_api import router as constructive_router
 from .customer_product import router as customer_product_router
 from .db import engine
@@ -40,6 +41,7 @@ app.include_router(service_control_router)
 app.include_router(customer_product_router)
 app.include_router(support_router)
 app.include_router(constructive_router)
+app.include_router(core_router)
 
 
 @app.on_event("startup")
