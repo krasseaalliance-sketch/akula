@@ -42,6 +42,8 @@ The first real fresh PostgreSQL upgrade then exposed a schema-order problem in `
 
 A subsequent fresh PostgreSQL run reached `0024_core_day4_artifacts_qa` and found the same unsafe batch-recreation pattern for `core_agents`, whose primary key is referenced by Core child tables. `0024` now uses PostgreSQL in-place ALTER operations for all four affected tables and retains its existing SQLite batch path.
 
+The next fresh PostgreSQL run completed schema DDL but failed while updating `alembic_version`: Alembic's default `VARCHAR(32)` could not store the 33-character `0025_core_day4_production_evidence` revision. `0001_initial` now widens that version column to `VARCHAR(128)` on PostgreSQL before applying the rest of the initial schema.
+
 ## Planned repair
 
 Rewrite only the seven stale test contracts to use tracked current APIs and deterministic fixtures. No skips, xfails, compatibility copies, or production deployment are permitted. The final sections of this document will record the red/green runs, new rc2 commit/tag, clean-clone verification, bundle checksum, and final status.

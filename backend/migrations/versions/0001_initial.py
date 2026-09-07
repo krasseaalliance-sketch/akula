@@ -40,6 +40,16 @@ INITIAL_TABLES = [
 
 def upgrade() -> None:
     bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        # Alembic's default VARCHAR(32) cannot store the current 0025
+        # revision identifier.
+        op.alter_column(
+            "alembic_version",
+            "version_num",
+            existing_type=String(32),
+            type_=String(128),
+            existing_nullable=False,
+        )
     Base.metadata.create_all(
         bind=bind,
         tables=[Base.metadata.tables[name] for name in INITIAL_TABLES],
