@@ -10,7 +10,58 @@ branch_labels = None
 depends_on = None
 
 
+def _upgrade_postgresql() -> None:
+    # Batch recreation drops a table primary-key constraint before replacing
+    # the table. PostgreSQL rejects that while Core child tables still hold
+    # foreign keys to the primary key. Alter these tables in place instead.
+    op.add_column("core_agents", sa.Column("user_id", sa.String(36), nullable=True))
+    op.create_foreign_key("fk_core_agents_user_id", "core_agents", "users", ["user_id"], ["id"])
+    op.create_index("ix_core_agents_user_id", "core_agents", ["user_id"])
+
+    op.add_column("core_tasks", sa.Column("parent_task_id", sa.String(36), nullable=True))
+    op.add_column("core_tasks", sa.Column("remediation_verification_id", sa.String(36), nullable=True))
+    op.create_foreign_key("fk_core_tasks_parent_task_id", "core_tasks", "core_tasks", ["parent_task_id"], ["id"])
+    op.create_foreign_key("fk_core_tasks_remediation_verification_id", "core_tasks", "core_verifications", ["remediation_verification_id"], ["id"])
+    op.create_index("ix_core_tasks_parent_task_id", "core_tasks", ["parent_task_id"])
+    op.create_index("ix_core_tasks_remediation_verification_id", "core_tasks", ["remediation_verification_id"])
+
+    op.add_column("core_artifacts", sa.Column("run_id", sa.String(36), nullable=True))
+    op.add_column("core_artifacts", sa.Column("artifact_key", sa.String(120), nullable=True))
+    op.execute("UPDATE core_artifacts SET artifact_key = id WHERE artifact_key IS NULL")
+    op.execute("UPDATE core_artifacts SET status = 'DRAFT' WHERE status = 'PENDING'")
+    op.execute("UPDATE core_artifacts SET status = 'APPROVED' WHERE status = 'VERIFIED'")
+    op.alter_column("core_artifacts", "artifact_key", existing_type=sa.String(120), nullable=False)
+    op.drop_constraint("ck_core_artifacts_status", "core_artifacts", type_="check")
+    op.create_check_constraint("ck_core_artifacts_type", "artifact_type IN ('DOCUMENT', 'LINK', 'FILE', 'IMAGE', 'BUILD', 'RELEASE', 'TEST_REPORT', 'SCREENSHOT', 'LOG')", "core_artifacts")
+    op.create_check_constraint("ck_core_artifacts_status", "status IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'SUPERSEDED')", "core_artifacts")
+    op.create_unique_constraint("uq_core_artifact_version", "core_artifacts", ["workspace_id", "artifact_key", "version"])
+    op.create_foreign_key("fk_core_artifacts_run_id", "core_artifacts", "core_runs", ["run_id"], ["id"])
+    op.create_index("ix_core_artifacts_run_id", "core_artifacts", ["run_id"])
+    op.create_index("ix_core_artifacts_artifact_key", "core_artifacts", ["artifact_key"])
+
+    op.add_column("core_verifications", sa.Column("qa_agent_id", sa.String(36), nullable=True))
+    op.add_column("core_verifications", sa.Column("status", sa.String(12), nullable=True, server_default="PENDING"))
+    op.add_column("core_verifications", sa.Column("checked_artifact_version", sa.String(80), nullable=True))
+    op.add_column("core_verifications", sa.Column("idempotency_key", sa.String(160), nullable=True))
+    op.add_column("core_verifications", sa.Column("defect", sa.Text(), nullable=True))
+    op.add_column("core_verifications", sa.Column("remediation_action", sa.Text(), nullable=True))
+    op.add_column("core_verifications", sa.Column("remediation_task_id", sa.String(36), nullable=True))
+    op.add_column("core_verifications", sa.Column("completed_at", sa.DateTime(), nullable=True))
+    op.drop_constraint("ck_core_verifications_result", "core_verifications", type_="check")
+    op.create_check_constraint("ck_core_verifications_status", "status IN ('PENDING', 'PASS', 'FAIL', 'BLOCKED')", "core_verifications")
+    op.create_foreign_key("fk_core_verifications_qa_agent_id", "core_verifications", "core_agents", ["qa_agent_id"], ["id"])
+    op.create_foreign_key("fk_core_verifications_remediation_task_id", "core_verifications", "core_tasks", ["remediation_task_id"], ["id"])
+    op.create_index("ix_core_verifications_qa_agent_id", "core_verifications", ["qa_agent_id"])
+    op.create_index("ix_core_verifications_remediation_task_id", "core_verifications", ["remediation_task_id"])
+    op.create_unique_constraint("uq_core_verification_idempotency", "core_verifications", ["workspace_id", "idempotency_key"])
+    op.execute("UPDATE core_verifications SET status = result WHERE status = 'PENDING' AND result <> 'PENDING'")
+
+
 def upgrade() -> None:
+    if op.get_bind().dialect.name != "sqlite":
+        _upgrade_postgresql()
+        return
+
     with op.batch_alter_table("core_agents", recreate="always") as batch:
         batch.add_column(sa.Column("user_id", sa.String(36), nullable=True))
         batch.create_foreign_key("fk_core_agents_user_id", "users", ["user_id"], ["id"])

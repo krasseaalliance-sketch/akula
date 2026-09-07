@@ -40,6 +40,8 @@ After the seven collection errors were removed, the first clean full run reached
 
 The first real fresh PostgreSQL upgrade then exposed a schema-order problem in `0001_initial`: the current `message_drafts` model contains foreign keys to `human_writing_runs` and `human_writing_variants`, while those tables were not in `INITIAL_TABLES`. The repair adds the required `community_style_profiles → human_writing_runs → human_writing_variants` order before `message_drafts`. The PostgreSQL-safe path in `0016_support_campaign_topics` was also corrected after the same fresh upgrade reached it: batch recreation attempted to drop a primary-key constraint still referenced by `support_messages`; PostgreSQL now uses in-place ALTER operations while SQLite keeps the existing batch path.
 
+A subsequent fresh PostgreSQL run reached `0024_core_day4_artifacts_qa` and found the same unsafe batch-recreation pattern for `core_agents`, whose primary key is referenced by Core child tables. `0024` now uses PostgreSQL in-place ALTER operations for all four affected tables and retains its existing SQLite batch path.
+
 ## Planned repair
 
 Rewrite only the seven stale test contracts to use tracked current APIs and deterministic fixtures. No skips, xfails, compatibility copies, or production deployment are permitted. The final sections of this document will record the red/green runs, new rc2 commit/tag, clean-clone verification, bundle checksum, and final status.
