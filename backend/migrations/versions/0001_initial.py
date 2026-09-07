@@ -21,6 +21,12 @@ INITIAL_TABLES = [
     "communities",
     "community_permissions",
     "leads",
+    # These tables are referenced by the current message_drafts model.  Keep
+    # their dependency order here so a fresh PostgreSQL database can create
+    # the initial table set without referring to a table from a later batch.
+    "community_style_profiles",
+    "human_writing_runs",
+    "human_writing_variants",
     "message_drafts",
     "publications",
     "publication_jobs",

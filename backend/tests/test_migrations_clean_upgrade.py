@@ -1,4 +1,5 @@
 import os
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -38,3 +39,13 @@ def test_fresh_sqlite_database_upgrades_to_alembic_head(tmp_path: Path):
         assert "source_message_id" in columns
     finally:
         engine.dispose()
+
+
+def test_initial_migration_orders_all_foreign_key_dependencies_before_message_drafts():
+    root = Path(__file__).resolve().parents[2]
+    migration = runpy.run_path(str(root / "backend/migrations/versions/0001_initial.py"))
+    tables = migration["INITIAL_TABLES"]
+
+    assert tables.index("community_style_profiles") < tables.index("human_writing_runs")
+    assert tables.index("human_writing_runs") < tables.index("human_writing_variants")
+    assert tables.index("human_writing_variants") < tables.index("message_drafts")
