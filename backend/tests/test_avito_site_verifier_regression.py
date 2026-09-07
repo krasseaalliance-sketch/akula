@@ -1,24 +1,54 @@
 from __future__ import annotations
 
-from runpy import run_path
+import json
+
+import pytest
+
+from app.hunter.sources import ManualJsonSourceAdapter
 
 
-QA2 = run_path("tools/avito_site_verifier_qa2.py")
-known_site_for = QA2["known_site_for"]
-run_regression_controls = QA2["run_regression_controls"]
+def _payload(status: str = "APPROVED_FOR_READ_ONLY_CAPTURE") -> dict[str, object]:
+    return {
+        "source_policy": {
+            "source": "fixture public listing",
+            "access_mode": "PUBLIC_HTTP_READ_CAPTURE",
+            "public_scope": "PUBLIC_LISTING",
+            "rate_limit": "ONE_PAGE_PER_RUN",
+            "terms_risk": "REVIEW_REQUIRED",
+            "automation_allowed": False,
+            "data_retention_rule": "retain_public_url_and_minimal_excerpt_only",
+            "status": status,
+        },
+        "signals": [
+            {
+                "id": "listing-1",
+                "source": "fixture",
+                "source_url": "https://example.test/listing/1",
+                "external_id": "listing-1",
+                "title": "Public request",
+                "text": "Нужен сайт",
+                "published_at": "2026-08-11T10:00:00+00:00",
+                "detected_at": "2026-08-11T10:01:00+00:00",
+                "metadata": {"verification_status": "PUBLIC_LISTING"},
+            }
+        ],
+    }
 
 
-def test_known_official_domains_are_resolved_before_search() -> None:
-    assert known_site_for({"seller": "Грузовичкоф"}) == "https://gruzovichkof.ru/"
-    assert known_site_for({"seller": "Типография Группа М"}) == "https://gmprint.ru/"
-    assert known_site_for({"seller": "ГИПЕРИОН ПРОЕКТ"}) == "https://giperionpro.ru/"
+def test_current_source_adapter_preserves_public_url_and_verification_provenance(tmp_path) -> None:
+    path = tmp_path / "capture.json"
+    path.write_text(json.dumps(_payload(), ensure_ascii=False), encoding="utf-8")
+
+    policy, signals = ManualJsonSourceAdapter(path).read()
+
+    assert policy.status == "APPROVED_FOR_READ_ONLY_CAPTURE"
+    assert signals[0].source_url == "https://example.test/listing/1"
+    assert signals[0].metadata["verification_status"] == "PUBLIC_LISTING"
 
 
-def test_control_entities_cannot_be_no_site_after_search() -> None:
-    rows = [
-        {"seller": "Грузовичкоф", "site_status": "NO_SITE_AFTER_SEARCH"},
-        {"seller": "Типография Группа М", "site_status": "NO_SITE_AFTER_SEARCH"},
-        {"seller": "ГИПЕРИОН ПРОЕКТ", "site_status": "NO_SITE_AFTER_SEARCH"},
-    ]
-    result = run_regression_controls(rows)
-    assert result["passed"] is True
+def test_unapproved_source_capture_is_rejected(tmp_path) -> None:
+    path = tmp_path / "capture.json"
+    path.write_text(json.dumps(_payload("REJECTED"), ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="source policy is not approved"):
+        ManualJsonSourceAdapter(path).read()

@@ -1,43 +1,38 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from runpy import run_path
+from datetime import UTC, datetime, timedelta
 
-_STAGE21 = run_path("tools/run_lead_hunter_stage21.py")
-_event_status = _STAGE21["_event_status"]
-_schedule = _STAGE21["_schedule"]
-
-
-def test_incremental_cursor_distinguishes_new_updated_and_previous() -> None:
-    row = {"source": "test", "external_id": "42", "id": "signal-42", "title": "Build site", "text": "catalog"}
-    cursor = {"seen_signals": {}}
-    assert _event_status(row, cursor) == "NEW"
-    cursor["seen_signals"]["test|42"] = {"content_hash": "wrong"}
-    assert _event_status(row, cursor) == "UPDATED"
-    cursor["seen_signals"]["test|42"] = {"content_hash": _STAGE21["_content_hash"](row)}
-    assert _event_status(row, cursor) == "PREVIOUSLY_SEEN"
+from app.hunter.dedupe import classify_duplicate, content_fingerprint
+from app.hunter.freshness import classify_freshness
+from app.hunter.models import RawSignal
+from app.hunter.normalization import normalize_signal
 
 
-def test_operational_health_does_not_follow_commercial_yield() -> None:
-    assert _schedule("HEALTHY", "LOW", "public_telegram_project_channel", 20) == ("SLOW", 180)
-    assert _schedule("HEALTHY", "UNKNOWN", "public_telegram_project_channel", None) == ("NORMAL", 45)
-    assert _schedule("BROKEN", "HIGH", "public_telegram_project_channel", 90) == ("PAUSED", None)
+def _signal(identifier: str, text: str) -> RawSignal:
+    return RawSignal(
+        id=identifier, source="fixture", source_url=f"https://example.test/{identifier}", external_id=identifier,
+        author_identifier=None, published_at=datetime(2026, 8, 11, tzinfo=UTC),
+        detected_at=datetime(2026, 8, 11, 0, 1, tzinfo=UTC), title="Request", text=text, metadata={},
+    )
 
 
-def test_live_stage21_artifacts_prove_recovery_and_dedupe() -> None:
-    root = Path(__file__).resolve().parents[2]
-    state = json.loads((root / "artifacts/lead_hunter_stage21_state.json").read_text(encoding="utf-8"))
-    assert state["version"] == 2
-    assert len(state["cycles"]) >= 2
-    assert state["cycles"][0]["new_money_now"] >= 1
-    assert state["cycles"][-1]["new_money_now"] == 0
-    assert set(state["recovery"]["restored_sources"]) >= {
-        "myworkfinder.ru",
-        "telegram:@job_developer",
-        "telegram:@digitaltender",
-        "telegram:@FreelancehuntProjects",
-    }
-    report = (root / "LEAD_HUNTER_STAGE_2_1_REPORT.md").read_text(encoding="utf-8")
-    assert "Stage 3 is not started." in report
-    assert "outreach" in report.casefold()
+def test_incremental_dedupe_fingerprint_distinguishes_updated_content() -> None:
+    old = {"source": "fixture", "external_id": "42", "title": "Website", "text": "Нужен корпоративный сайт компании"}
+    updated = {**old, "text": "Нужен корпоративный сайт компании каталог"}
+
+    assert content_fingerprint(old["text"]) != content_fingerprint(updated["text"])
+
+
+def test_current_freshness_contract_pauses_stale_signals() -> None:
+    now = datetime(2026, 8, 11, 12, tzinfo=UTC)
+
+    assert classify_freshness(now - timedelta(hours=2), now).bucket == "ULTRA_FRESH"
+    assert classify_freshness(now - timedelta(days=10), now).bucket == "STALE"
+    assert classify_freshness(now - timedelta(days=31), now).bucket == "DEAD"
+
+
+def test_reposted_signal_is_not_reprocessed_as_a_new_demand() -> None:
+    first = normalize_signal(_signal("a", "Нужен сайт для компании, бюджет 200000"))
+    repost = normalize_signal(_signal("b", "Нужен сайт для компании, бюджет 200000"))
+
+    assert classify_duplicate(repost, [first])[0] == "EXACT_DUPLICATE"

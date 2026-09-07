@@ -1,60 +1,42 @@
 from __future__ import annotations
 
-from runpy import run_path
+from datetime import UTC, datetime
 
-_QA = run_path("tools/qa_avito_opportunity_2026_08_11.py")
-entity_key = _QA["entity_key"]
-classify_taxonomy = _QA["classify_taxonomy"]
-run_consistency_checks = _QA["run_consistency_checks"]
-score = _QA["score"]
+from app.hunter.dedupe import classify_duplicate, content_fingerprint
+from app.hunter.models import RawSignal
+from app.hunter.normalization import normalize_signal
 
 
-def test_business_entity_dedupe_collapses_similar_listing_name() -> None:
-    first = {"seller": "ООО Стройсталь", "avito_ad": "https://avito.ru/one"}
-    second = {"seller": "Ещё похожее у исполнителя ООО Стройсталь", "avito_ad": "https://avito.ru/two"}
-    assert entity_key(first) == entity_key(second)
+def _signal(text: str, identifier: str, source: str = "fixture") -> object:
+    return RawSignal(
+        id=identifier,
+        source=source,
+        source_url=f"https://example.test/orders/{identifier}",
+        external_id=identifier,
+        author_identifier=None,
+        published_at=datetime(2026, 8, 11, tzinfo=UTC),
+        detected_at=datetime(2026, 8, 11, 0, 1, tzinfo=UTC),
+        title="Public project request",
+        text=text,
+        metadata={"source_scope": "PUBLIC_PAGE_CAPTURE"},
+    )
 
 
-def test_taxonomy_does_not_map_logistics_to_furniture_offer() -> None:
-    niche, offer, confidence, _ = classify_taxonomy({"seller": "Точная доставка", "title": "Грузоперевозки для бизнеса", "niche": "Грузоперевозки / B2B логистика"})
-    assert "логистика" in niche
-    assert "мебел" not in offer.casefold()
-    assert confidence == "HIGH"
+def test_similar_public_listings_are_deduplicated_by_current_hunter_contract() -> None:
+    first = normalize_signal(_signal("Нужен сайт для строительной компании, бюджет 200000", "one"))
+    repost = normalize_signal(_signal("Нужен сайт для строительной компании, бюджет 200000", "two", "another-source"))
+
+    assert classify_duplicate(repost, [first]) == ("EXACT_DUPLICATE", 1.0)
 
 
-def test_taxonomy_ignores_stale_niche_when_listing_is_construction() -> None:
-    niche, offer, confidence, _ = classify_taxonomy({
-        "seller": "Строительная компания Тёплый стан",
-        "title": "Строительство домов из газобетона",
-        "niche": "Мебель / кухни / производство",
-    })
-    assert "строитель" in niche.casefold()
-    assert "мебел" not in offer.casefold()
-    assert confidence == "HIGH"
+def test_demand_fingerprint_is_stable_for_reordered_words() -> None:
+    assert content_fingerprint("Нужен сайт бюджет 200000 для компании") == content_fingerprint(
+        "Для компании нужен сайт бюджет 200000"
+    )
 
 
-def test_score_caps_unverified_weak_candidate_below_100() -> None:
-    value, _ = score({"final_lead_score": 100}, "SITE_UNVERIFIED", "MEDIUM", "HIGH")
-    assert value < 100
+def test_different_public_requests_remain_unrelated() -> None:
+    first = normalize_signal(_signal("Нужен сайт для строительной компании", "one"))
+    other = normalize_signal(_signal("Нужна автоматизация складской логистики", "two", "another-source"))
 
-
-def test_consistency_checks_reject_final_score_at_100() -> None:
-    rows = [{
-        "business_entity_key": "one",
-        "niche": "B2B/услуги — требуется уточнение",
-        "recommended_offer": "Корпоративный сайт",
-        "site_status": "SITE_UNVERIFIED",
-        "site_ownership_proven": False,
-        "lead_score": 99,
-        "final_lead_score": 100,
-        "seller": "A",
-    }]
-    assert run_consistency_checks(rows)["passed"] is False
-
-
-def test_consistency_checks_catch_duplicate_and_taxonomy_conflict() -> None:
-    rows = [
-        {"business_entity_key": "same", "niche": "Грузоперевозки / B2B логистика", "recommended_offer": "Сайт-каталог мебели", "site_status": "SITE_UNVERIFIED", "site_ownership_proven": False, "lead_score": 94, "seller": "A"},
-        {"business_entity_key": "same", "niche": "Строительство домов", "recommended_offer": "Сайт-каталог мебели", "site_status": "SITE_CONFIRMED", "site_ownership_proven": True, "lead_score": 94, "seller": "B"},
-    ]
-    assert run_consistency_checks(rows)["passed"] is False
+    assert classify_duplicate(other, [first])[0] == "UNRELATED"

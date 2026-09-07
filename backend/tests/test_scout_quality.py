@@ -1,25 +1,32 @@
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
+from datetime import UTC, datetime
+
+from app.hunter.intent import RulesIntentProvider
+from app.hunter.models import RawSignal
+from app.hunter.normalization import normalize_signal
+from app.hunter.qualification import qualify_signal
 
 
-MODULE_PATH = Path(__file__).parents[2] / "scout-vps-stage-20260814" / "scout.py"
-spec = importlib.util.spec_from_file_location("scout_stage", MODULE_PATH)
-assert spec and spec.loader
-scout = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(scout)
-
-
-def test_telegram_digest_is_not_a_lead() -> None:
-    digest = (
-        "За последние сутки наш фриланс-бот нашел 25 проектов на сумму более 0 руб. "
-        "в категории Разработка"
+def _qualified(text: str):
+    signal = RawSignal(
+        id="telegram-fixture", source="telegram:@fixture", source_url="https://example.test/message/1",
+        external_id="1", author_identifier="public_channel:fixture",
+        published_at=datetime(2026, 8, 11, tzinfo=UTC), detected_at=datetime(2026, 8, 11, 0, 1, tzinfo=UTC),
+        title="Public message", text=text, metadata={"source_scope": "PUBLIC_CHANNEL_PREVIEW"},
     )
-    assert scout.telegram_request_is_qualified(digest) is False
+    normalized = normalize_signal(signal)
+    intent = RulesIntentProvider().analyze(normalized)
+    return qualify_signal(normalized, intent)
 
 
-def test_concrete_telegram_request_is_kept() -> None:
+def test_telegram_digest_is_not_a_lead_under_current_qualification_contract() -> None:
+    digest = "digest: за последние сутки найдено 25 проектов на сумму 0 руб."
+
+    assert _qualified(digest).decision == "REJECTED"
+
+
+def test_concrete_telegram_request_is_kept_under_current_qualification_contract() -> None:
     request = "Нужен исполнитель: сделать лендинг для мебельной компании, бюджет обсуждается"
-    assert scout.telegram_request_is_qualified(request) is True
 
+    assert _qualified(request).decision == "QUALIFIED"
