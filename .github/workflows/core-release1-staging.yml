@@ -4,14 +4,16 @@ on:
   push:
     tags:
       - "core-r1-rc*"
+      - "core-r1-staging-rc*"
     branches:
       - "codex/core-r1-rc1-2026-09-07"
+      - "codex/core-r1-staging-rc2-2026-09-07"
   workflow_dispatch:
     inputs:
       ref:
         description: "Immutable tag or commit to verify"
         required: true
-        default: "core-r1-staging-rc1-2026-09-07"
+        default: "core-r1-staging-rc2-2026-09-07"
 
 permissions:
   contents: read
@@ -19,13 +21,15 @@ permissions:
 jobs:
   candidate:
     runs-on: ubuntu-latest
+    env:
+      EXPECTED_REF: ${{ github.event.inputs.ref || github.ref_name }}
     outputs:
       commit: ${{ steps.identity.outputs.commit }}
       tag: ${{ steps.identity.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || (github.ref_type == 'tag' && github.ref_name) || 'core-r1-staging-rc1-2026-09-07' }}
+          ref: ${{ github.event.inputs.ref || (github.ref_type == 'tag' && github.ref_name) || 'core-r1-staging-rc2-2026-09-07' }}
           fetch-depth: 0
       - name: Verify immutable candidate identity
         id: identity
@@ -33,8 +37,11 @@ jobs:
         run: |
           set -euo pipefail
           commit="$(git rev-parse HEAD)"
-          tag="$(git describe --tags --exact-match "$commit")"
-          test "$tag" = "core-r1-staging-rc1-2026-09-07"
+          tag="$(git tag --points-at "$commit" | grep -E '^core-r1-(staging-)?rc' | head -n 1)"
+          test -n "$tag"
+          if [[ "$EXPECTED_REF" == core-r1-* ]]; then
+            test "$tag" = "$EXPECTED_REF"
+          fi
           tag_commit="$(git rev-list -n 1 "$tag")"
           test "$commit" = "$tag_commit"
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
@@ -112,15 +119,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-artifact
-          git archive --format=tar --prefix=core-r1-staging-rc1-2026-09-07/ HEAD > release-artifact/core-r1-staging-rc1-2026-09-07.tar
-          sha256sum release-artifact/core-r1-staging-rc1-2026-09-07.tar > release-artifact/SHA256SUMS
+          tag="${{ needs.candidate.outputs.tag }}"
+          git archive --format=tar --prefix="$tag/" HEAD > "release-artifact/$tag.tar"
+          sha256sum "release-artifact/$tag.tar" > release-artifact/SHA256SUMS
           {
             echo "commit=$(git rev-parse HEAD)"
-            echo "tag=core-r1-staging-rc1-2026-09-07"
+            echo "tag=$tag"
             echo "alembic_head=0025_core_day4_production_evidence"
             echo "deployment=not automatic; staging host and STAGING_* secrets are intentionally not used"
           } > release-artifact/RELEASE_METADATA.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: core-r1-staging-rc1-2026-09-07
+          name: ${{ needs.candidate.outputs.tag }}
           path: release-artifact/
