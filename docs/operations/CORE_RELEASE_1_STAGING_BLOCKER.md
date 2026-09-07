@@ -16,7 +16,7 @@ Actions/Secrets.
 Минимально необходимое действие: предоставить безопасный GitHub access через
 утверждённый механизм и подтвердить private repository URL. После этого можно
 создать remote, проверить `.gitignore`, опубликовать только
-`codex/core-r1-rc1-2026-09-07` и `core-r1-rc1-2026-09-07`, а затем настроить
+`codex/core-r1-rc1-2026-09-07` и `core-r1-staging-rc1-2026-09-07`, а затем настроить
 staging-only delivery. Секреты в workspace, коммит, логи и отчёт не передавать.
 
 Production не затрагивался.

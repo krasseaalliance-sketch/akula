@@ -35,8 +35,8 @@ Artifact files stay in the staging-only `staging_artifacts` volume.
 
 ```bash
 git fetch --tags origin
-git checkout --detach core-r1-rc1-2026-09-07
-test "$(git rev-parse HEAD)" = "71b1d7869f10a44b895c04f5576d8ea55cde5bca"
+git checkout --detach core-r1-staging-rc1-2026-09-07
+test "$(git rev-parse HEAD)" = "6772438332e806be2b0053af92b729b9651a9d52"
 docker compose --env-file .env.staging -f deploy/staging/docker-compose.staging.yml config
 docker compose --env-file .env.staging -f deploy/staging/docker-compose.staging.yml up -d db redis
 docker compose --env-file .env.staging -f deploy/staging/docker-compose.staging.yml exec -T db pg_dump -U "$STAGING_POSTGRES_USER" -d "$STAGING_POSTGRES_DB" --format=custom > backups/core-r1-staging-pre-migration.dump
@@ -52,7 +52,7 @@ only. Verify `0025_core_day4_production_evidence` before external E2E.
 curl --fail --silent --show-error "https://${STAGING_HOST}/health"
 curl --fail --silent --show-error --head "https://${STAGING_HOST}/scout/core"
 test "$(curl --fail --silent --head "https://${STAGING_HOST}/health" | tr -d '\r' | grep -c 'X-Environment: STAGING')" -eq 1
-test "$(curl --fail --silent --head "https://${STAGING_HOST}/health" | tr -d '\r' | grep -c 'X-Release-Tag: core-r1-rc1-2026-09-07')" -eq 1
+test "$(curl --fail --silent --head "https://${STAGING_HOST}/health" | tr -d '\r' | grep -c 'X-Release-Tag: core-r1-staging-rc1-2026-09-07')" -eq 1
 ```
 
 Also verify `/core` is `404`, unauthenticated Core APIs do not return data,
