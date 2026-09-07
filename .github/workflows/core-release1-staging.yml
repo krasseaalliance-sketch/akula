@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "core-r1-rc*"
+    branches:
+      - "codex/core-r1-rc1-2026-09-07"
   workflow_dispatch:
     inputs:
       ref:
@@ -26,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.event.inputs.ref || (github.ref_type == 'tag' && github.ref_name) || 'core-r1-rc1-2026-09-07' }}
           fetch-depth: 0
       - name: Verify immutable candidate identity
         id: identity
