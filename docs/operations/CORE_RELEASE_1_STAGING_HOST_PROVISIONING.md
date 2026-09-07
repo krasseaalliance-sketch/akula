@@ -31,17 +31,17 @@
 
 ## Рекомендуемый вариант без автоматического заказа
 
-Один рекомендуемый вариант: **Hetzner Cloud CX23**, регион **Germany (FSN/NBG)** или **Finland (HEL)**, Ubuntu LTS.
+Один рекомендуемый вариант: **Hetzner Cloud CPX22**, регион **Germany (FSN/NBG)** или **Finland (HEL)**, Ubuntu LTS.
 
 - 2 shared vCPU;
 - 4 GB RAM;
-- 40 GB NVMe;
+- 80 GB NVMe;
 - Docker Engine + Docker Compose;
 - firewall: только `22`, `80`, `443`;
 - SSH-ключ, password root-login отключён;
-- ориентир текущей цены: **€5.49/месяц без VAT и без публичного IPv4**; IPv4, backup и дополнительные storage оплачиваются отдельно по тарифу провайдера.
+- ориентир текущей цены: **€19.49/месяц без VAT и без публичного IPv4**; IPv4, backup и дополнительные storage оплачиваются отдельно по тарифу провайдера.
 
-Официальная таблица Hetzner указывает для CX23 2 vCPU, 4 GB RAM и 40 GB NVMe, а также текущий monthly cap €5.49 без VAT для Germany/Finland: [Hetzner Cloud price adjustment](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/).
+Официальная таблица Hetzner указывает для CPX22 2 vCPU, 4 GB RAM и текущий monthly cap €19.49 без VAT для Germany/Finland: [Hetzner Cloud price adjustment](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/). Спецификация 80 GB для CPX22 указана на странице [Hetzner Cloud Germany](https://www.hetzner.com/cloud-made-in-germany/).
 
 Этой конфигурации достаточно для малонагруженного тестового Compose-контура Release 1: frontend, backend, PostgreSQL, Redis, reverse proxy и staging-only file storage на одном хосте. Это не sizing для production-трафика; после запуска обязательна проверка памяти/CPU и увеличение хоста при нехватке ресурсов.
 
@@ -86,6 +86,6 @@
 
 Нужен владелец/система: владелец cloud-аккаунта и платёжный доступ.
 
-Минимально необходимое действие: явно одобрить заказ Hetzner Cloud CX23 в FSN/NBG или HEL (2 vCPU, 4 GB, 40 GB) по ориентиру €5.49/месяц без VAT, после чего предоставить отдельный домен/subdomain и DNS-доступ для staging.
+Минимально необходимое действие: явно одобрить заказ Hetzner Cloud CPX22 в FSN/NBG или HEL (2 vCPU, 4 GB, 80 GB) по ориентиру €19.49/месяц без VAT, после чего предоставить отдельный домен/subdomain и DNS-доступ для staging.
 
 До этого момента статус остаётся `WAITING FOR PAYMENT APPROVAL`. После выдачи хоста следующим шагом будет только provisioning и внешняя техническая проверка; E2E A/B/C в этой задаче не выполняется.
