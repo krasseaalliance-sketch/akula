@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  EXPECTED_CORE_COMMIT: 6772438332e806be2b0053af92b729b9651a9d52
+  EXPECTED_CORE_COMMIT: c73e38e208767c8f19d1c0fe4014265b4241e4e4
 
 jobs:
   candidate:
