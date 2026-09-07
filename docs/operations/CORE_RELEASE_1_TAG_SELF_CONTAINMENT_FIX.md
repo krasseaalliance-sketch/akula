@@ -36,6 +36,8 @@ Therefore adding the local files would make the release depend on machine-specif
 - `pytest -q`: exit `1`, 7 collection/import errors listed above.
 - Production and the old immutable tag have not been changed.
 
+After the seven collection errors were removed, the first clean full run reached all tests and exposed one additional stale, non-import dependency: `backend/tests/test_hunter_stage1r1.py` read the absent historical top-level `docker-compose.yml` and asserted a removed `hunter-readonly` service/runner. This path is also not present in the old tag, has no current runtime consumer, and was replaced with the tracked `app.hunter.safety.hunter_runtime_capabilities()` contract. It is documented separately from the original seven import errors because it was only observable after collection succeeded.
+
 ## Planned repair
 
 Rewrite only the seven stale test contracts to use tracked current APIs and deterministic fixtures. No skips, xfails, compatibility copies, or production deployment are permitted. The final sections of this document will record the red/green runs, new rc2 commit/tag, clean-clone verification, bundle checksum, and final status.

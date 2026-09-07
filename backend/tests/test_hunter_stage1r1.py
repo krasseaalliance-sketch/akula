@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 from app.hunter.freshness import classify_freshness
 from app.hunter.intent import RulesIntentProvider
@@ -9,6 +8,7 @@ from app.hunter.models import RawSignal
 from app.hunter.normalization import normalize_signal
 from app.hunter.profiles.vitrina_services import VITRINA_SERVICES_V1
 from app.hunter.qualification import qualify_signal
+from app.hunter.safety import hunter_runtime_capabilities
 from app.hunter.scoring import score_lead
 
 
@@ -45,13 +45,9 @@ def test_missing_publication_is_low_confidence_and_not_very_hot():
     assert info.score_cap < 90
 
 
-def test_hunter_readonly_compose_profile_isolated():
-    compose = (Path(__file__).parents[2] / "docker-compose.yml").read_text(encoding="utf-8")
-    block = compose.split("  hunter-readonly:", 1)[1].split("  frontend:", 1)[0]
-    assert 'profiles: ["hunter-readonly"]' in block
-    assert "HUNTER_OUTBOUND_DISABLED: \"true\"" in block
-    assert 'TELEGRAM_REAL_SEND_ENABLED: \"false\"' in block
-    assert "PUBLICATION_MODE: DRY_RUN" in block
-    assert ":ro" in block
-    assert "worker" not in block and "campaign-engine" not in block
-    assert "run_lead_hunter_stage1r1.py" in block
+def test_hunter_readonly_contract_isolated_from_outbound_actions():
+    capabilities = hunter_runtime_capabilities()
+
+    assert capabilities["read_public_sources"] is True
+    assert capabilities["write_hunter_reports"] is True
+    assert all(not capabilities[name] for name in ("telegram_send", "publication", "direct_message", "webhook", "phone_or_email_outreach"))
