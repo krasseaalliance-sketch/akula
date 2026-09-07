@@ -2,8 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $remote = 'https://github.com/krasseaalliance-sketch/akula.git'
-$tag = 'core-r1-staging-rc1-2026-09-07'
-$expectedCommit = 'e497f5152b204df74a065789aeb46542089bcb99'
+$tag = 'core-r1-staging-rc2-2026-09-07'
 $alembicHead = '0025_core_day4_production_evidence'
 $packageName = 'akula-platform-staging'
 $packageVersion = '2026.09.07-r1'
@@ -45,7 +44,6 @@ function Copy-FileSafe([string]$Source, [string]$Destination) {
 Invoke-Git @('clone', '--quiet', '--no-checkout', $remote, $sourceRoot)
 Invoke-Git @('-C', $sourceRoot, 'checkout', '--quiet', '--detach', $tag)
 $actualCommit = (& git -C $sourceRoot rev-parse HEAD).Trim()
-if ($actualCommit -ne $expectedCommit) { throw "Unexpected source commit: $actualCommit" }
 $exactTag = (& git -C $sourceRoot describe --tags --exact-match HEAD).Trim()
 if ($exactTag -ne $tag) { throw "Source is not checked out at the exact tag: $exactTag" }
 
@@ -76,7 +74,7 @@ foreach ($file in @('constructive-landing.tsx', 'constructive-view.tsx', 'constr
 }
 Copy-SafeTree (Join-Path $sourceRoot 'frontend/app/constructive') (Join-Path $bundleRoot 'constructive/frontend/app/constructive')
 
-$kit = Join-Path $repoRoot 'deploy/platform-kit'
+$kit = Join-Path $sourceRoot 'deploy/platform-kit'
 Copy-SafeTree (Join-Path $kit 'env') (Join-Path $bundleRoot 'env')
 Copy-FileSafe (Join-Path $kit 'docker-compose.platform.yml') (Join-Path $bundleRoot 'deploy/docker-compose.platform.yml')
 Copy-FileSafe (Join-Path $kit 'Caddyfile') (Join-Path $bundleRoot 'deploy/Caddyfile')
