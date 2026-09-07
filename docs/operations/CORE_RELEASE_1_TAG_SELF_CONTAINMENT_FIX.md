@@ -38,6 +38,8 @@ Therefore adding the local files would make the release depend on machine-specif
 
 After the seven collection errors were removed, the first clean full run reached all tests and exposed one additional stale, non-import dependency: `backend/tests/test_hunter_stage1r1.py` read the absent historical top-level `docker-compose.yml` and asserted a removed `hunter-readonly` service/runner. This path is also not present in the old tag, has no current runtime consumer, and was replaced with the tracked `app.hunter.safety.hunter_runtime_capabilities()` contract. It is documented separately from the original seven import errors because it was only observable after collection succeeded.
 
+The first real fresh PostgreSQL upgrade then exposed a schema-order problem in `0001_initial`: the current `message_drafts` model contains foreign keys to `human_writing_runs` and `human_writing_variants`, while those tables were not in `INITIAL_TABLES`. The repair adds the required `community_style_profiles → human_writing_runs → human_writing_variants` order before `message_drafts`. The PostgreSQL-safe path in `0016_support_campaign_topics` was also corrected after the same fresh upgrade reached it: batch recreation attempted to drop a primary-key constraint still referenced by `support_messages`; PostgreSQL now uses in-place ALTER operations while SQLite keeps the existing batch path.
+
 ## Planned repair
 
 Rewrite only the seven stale test contracts to use tracked current APIs and deterministic fixtures. No skips, xfails, compatibility copies, or production deployment are permitted. The final sections of this document will record the red/green runs, new rc2 commit/tag, clean-clone verification, bundle checksum, and final status.
