@@ -16,9 +16,9 @@ export function ConstructiveLanding() {
           </div>
         </div>
         <div className="constructive-landing-art" aria-label="Constructive">
-          <div className="constructive-orb" aria-hidden="true"><span>C</span><i /><i /><i /></div>
-          <strong>CONSTRUCTIVE</strong>
-          <small>CONSTRUCTION MANAGEMENT SYSTEM</small>
+          <div className="constructive-mark-frame">
+            <img src="/constructive-logo.png" alt="Constructive" />
+          </div>
         </div>
       </section>
       <section className="constructive-landing-strip">
