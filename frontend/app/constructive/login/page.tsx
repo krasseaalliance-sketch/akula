@@ -34,7 +34,7 @@ export default function ConstructiveLoginPage() {
   }
 
   return (
-    <main className="auth-screen">
+    <main className="auth-screen constructive-login">
       <div className="auth-shell">
         <Link className="lh-brand" href={appPath("/")}>
           <span className="lh-brand-mark">C</span>

@@ -7,6 +7,7 @@ import "./support-chat.css";
 import "./cabinet-directory.css";
 import "./customer-dashboard.css";
 import "./constructive.css";
+import "./constructive-concept.css";
 import "./public-dashboard.css";
 
 export const metadata: Metadata = process.env.NEXT_PUBLIC_APP_PRODUCT === "constructive"
