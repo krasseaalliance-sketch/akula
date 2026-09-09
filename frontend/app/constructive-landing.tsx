@@ -17,7 +17,7 @@ export function ConstructiveLanding() {
         </div>
         <div className="constructive-landing-art" aria-label="Constructive">
           <div className="constructive-mark-frame">
-            <img src="/constructive-logo.png" alt="Constructive" />
+            <img src={appPath("/constructive-logo.png")} alt="Constructive" />
           </div>
         </div>
       </section>
