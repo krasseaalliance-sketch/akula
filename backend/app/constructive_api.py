@@ -4,17 +4,21 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .api import current_user
 from .constructive_access import constructive_role, visible_constructive_data
 from .asmet_queries import answer_asmet_question, persist_creator_history_report, visible_asmet_messages
+from .asmet_processing import process_max_message
+from .config import get_settings
 from .db import get_db
-from .models import ConstructiveAsmetMessage, ConstructiveCabinet, ConstructiveCabinetInvite, ConstructiveOrganization, User
+from .max_integration import MaxBotClient, parse_max_message_update
+from .models import ConstructiveAsmetMessage, ConstructiveCabinet, ConstructiveCabinetInvite, ConstructiveObject, ConstructiveOrganization, User
 from .security import create_access_token, hash_password
+from .services import audit
 
 
 @dataclass(frozen=True)
@@ -125,6 +129,147 @@ class AsmetHistoryReportIn(BaseModel):
 
 
 router = APIRouter(prefix="/api/constructive", tags=["constructive"])
+
+
+def _max_workspace_owner(db: Session, organization: ConstructiveOrganization) -> User | None:
+    cabinet = db.scalar(
+        select(ConstructiveCabinet)
+        .where(
+            ConstructiveCabinet.organization_id == organization.id,
+            ConstructiveCabinet.role == "CREATOR",
+            ConstructiveCabinet.status == "ACTIVE",
+        )
+        .order_by(ConstructiveCabinet.created_at.asc())
+    )
+    return db.get(User, cabinet.user_id) if cabinet else None
+
+
+@router.post("/asmet/max/connect")
+def connect_max(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    settings = get_settings()
+    organization_id = settings.max_asmet_organization_id
+    if not organization_id or not settings.max_asmet_access_token or not settings.max_webhook_url or not settings.max_webhook_secret:
+        raise HTTPException(status_code=503, detail="MAX integration is not configured")
+    organization = db.get(ConstructiveOrganization, organization_id)
+    if organization is None:
+        raise HTTPException(status_code=404, detail="Constructive organization not found")
+    if constructive_role(db, user.id, organization.id) != "CREATOR":
+        raise HTTPException(status_code=403, detail="Creator role required")
+    try:
+        client = MaxBotClient(settings.max_asmet_access_token, base_url=settings.max_api_base_url)
+        bot = client.get_me()
+        if bot.get("is_bot") is not True:
+            raise ValueError("MAX_BOT_REQUIRED")
+        subscription = client.subscribe_webhook(settings.max_webhook_url, settings.max_webhook_secret)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - external provider errors are sanitized
+        raise HTTPException(status_code=502, detail="MAX connection failed") from exc
+    audit(
+        db,
+        workspace_id=organization.workspace_id,
+        actor_id=user.id,
+        action="constructive.max.connected",
+        entity_type="ConstructiveOrganization",
+        entity_id=organization.id,
+        after={
+            "bot_id": str(bot.get("user_id", "")),
+            "bot_username": bot.get("username"),
+            "webhook_url": settings.max_webhook_url,
+            "subscription_success": subscription.get("success") is True,
+        },
+    )
+    db.commit()
+    return {
+        "connected": subscription.get("success") is True,
+        "organization_id": organization.id,
+        "bot_id": bot.get("user_id"),
+        "bot_username": bot.get("username"),
+        "webhook_url": settings.max_webhook_url,
+    }
+
+
+@router.post("/asmet/max/webhook")
+def receive_max_webhook(
+    payload: dict,
+    x_max_bot_api_secret: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    settings = get_settings()
+    if not settings.max_asmet_access_token or not settings.max_asmet_organization_id or not settings.max_webhook_secret:
+        raise HTTPException(status_code=503, detail="MAX integration is not configured")
+    if not secrets.compare_digest(x_max_bot_api_secret or "", settings.max_webhook_secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
+    update = parse_max_message_update(payload)
+    if update is None:
+        return {"accepted": True, "ignored": True}
+    if settings.max_asmet_chat_id and update.chat_id != str(settings.max_asmet_chat_id):
+        return {"accepted": True, "ignored": True}
+    organization = db.get(ConstructiveOrganization, settings.max_asmet_organization_id)
+    if organization is None:
+        raise HTTPException(status_code=404, detail="Constructive organization not found")
+    actor = _max_workspace_owner(db, organization)
+    if actor is None:
+        raise HTTPException(status_code=503, detail="Constructive workspace owner not found")
+    audit(
+        db,
+        workspace_id=organization.workspace_id,
+        actor_id=actor.id,
+        action="constructive.max.webhook.received",
+        entity_type="ConstructiveAsmetMessage",
+        entity_id=update.message_id,
+        after={"chat_id": update.chat_id, "message_id": update.message_id, "sender_id": update.sender_id},
+    )
+    client = MaxBotClient(settings.max_asmet_access_token, base_url=settings.max_api_base_url)
+    result = process_max_message(
+        db,
+        organization_id=organization.id,
+        external_chat_id=update.chat_id,
+        external_message_id=update.message_id,
+        text=update.text,
+        sent_at=update.sent_at,
+        edited_at=update.edited_at,
+    )
+    if result.acknowledgement_required:
+        client.send_message(
+            update.chat_id,
+            "Принято",
+            idempotency_key=f"asmet:{organization.id}:{update.message_id}:ack",
+        )
+        stored_message = db.get(ConstructiveAsmetMessage, result.message_id)
+        if stored_message is not None:
+            stored_message.acknowledgement_sent = True
+            db.commit()
+    return {"accepted": True, "ignored": False, "status": result.status, "message_id": result.message_id}
+
+
+@router.get("/public/stats")
+def public_stats(db: Session = Depends(get_db)):
+    """Return aggregate public counters for the Constructive landing page.
+
+    This endpoint deliberately returns no workspace, organization, object, or
+    user identifiers. Only active records are included in the public totals.
+    """
+    organizations = int(
+        db.scalar(
+            select(func.count(ConstructiveOrganization.id)).where(
+                ConstructiveOrganization.status == "ACTIVE"
+            )
+        )
+        or 0
+    )
+    objects = int(
+        db.scalar(
+            select(func.count(ConstructiveObject.id))
+            .join(ConstructiveOrganization, ConstructiveOrganization.id == ConstructiveObject.organization_id)
+            .where(
+                ConstructiveObject.status == "ACTIVE",
+                ConstructiveOrganization.status == "ACTIVE",
+            )
+        )
+        or 0
+    )
+    return {"organizations": organizations, "objects": objects}
 
 
 @router.get("/cabinets/me")

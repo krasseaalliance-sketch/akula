@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     telegram_live_read_enabled: bool = False
     telegram_proxy_host: str | None = None
     telegram_proxy_port: int | None = None
+    max_api_base_url: str = "https://platform-api2.max.ru"
+    max_asmet_access_token: str | None = None
+    max_asmet_organization_id: str | None = None
+    max_asmet_chat_id: str | None = None
+    max_webhook_url: str | None = None
+    max_webhook_secret: str | None = None
     openai_api_key: str | None = None
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-5.6-terra"
